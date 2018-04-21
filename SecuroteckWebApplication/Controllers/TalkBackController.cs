@@ -12,16 +12,16 @@ namespace SecuroteckWebApplication.Controllers
     {
 
         [ActionName("Hello")]
-        public HttpResponseMessage Get()
+        public IHttpActionResult Get()
         {
             #region TASK1
             //api/talkback/hello response
-            return Request.CreateResponse(HttpStatusCode.OK, "Hello World");
+            return Ok("Hello World");
             #endregion
         }
 
         [ActionName("Sort")]
-        public HttpResponseMessage Get([FromUri]string[] integers)
+        public IHttpActionResult Get([FromUri]string[] integers)
         {
             #region TASK1
 
@@ -39,21 +39,21 @@ namespace SecuroteckWebApplication.Controllers
                 }
                 catch
                 {
-                    message.StatusCode = HttpStatusCode.BadRequest;
-                    return message;
+                    //message.StatusCode = HttpStatusCode.BadRequest;
+                    return BadRequest();
                 }
             }
 
             if (integers.Length != 0)
             {
                 Array.Sort(intArraySorting);
-                return Request.CreateResponse(HttpStatusCode.OK, intArraySorting);
+                return Ok(intArraySorting);
             }
 
             else
             {
                 int[] intArray = new int[0];
-                return Request.CreateResponse(HttpStatusCode.OK, intArray);
+                return Ok(intArray);
             }
             #endregion
         }

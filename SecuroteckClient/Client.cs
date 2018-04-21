@@ -65,12 +65,20 @@ namespace SecuroteckClient
                     string[] requestNums = null;
                     string outRequest = "/api/talkback/sort?";
 
-                    inRequest = inRequest.Remove(0, "TalkBack Sort [".Length);
+                    inRequest = inRequest.Remove(0, "TalkBack Sort".Length);
+                    try
+                    {
+                        inRequest = inRequest.Remove(0, " [".Length);
+                    }
+                    catch
+                    {
+
+                    }
                     inRequest = inRequest.TrimEnd(new char[] { ']', ' ' });
                     requestNums = inRequest.Split(',');
 
 
-                    if (requestNums.Length < 1)
+                    if (requestNums.Length == 1)
                     {
                         Console.WriteLine(requestNums[0]);
                         return;
@@ -89,9 +97,9 @@ namespace SecuroteckClient
                             }
                         }
                     }
-                    else
+                    else if (requestNums.Length == 0)
                     {
-
+                        outRequest += "integers=";
                     }
 
                     task = GetStringAsync(outRequest);
@@ -191,7 +199,7 @@ namespace SecuroteckClient
                         };
                         request.Headers.Add("ApiKey", localApiKey);
 
-                        task = DeleteUserASync(request);
+                        task = GetRequestAsync(request);
                     }
                 }
                 #endregion
@@ -205,14 +213,15 @@ namespace SecuroteckClient
                     }
                     else
                     {
+                        inRequest = inRequest.Remove(0, "Protected SHA256 ".Length);
+
                         var request = new HttpRequestMessage()
                         {
-                            RequestUri = new Uri(client.BaseAddress + "api/protected/hello"),
-                            Method = HttpMethod.Get,
+                            RequestUri = new Uri(client.BaseAddress + "api/protected/sha256?message=" + inRequest),
                         };
                         request.Headers.Add("ApiKey", localApiKey);
 
-                        task = DeleteUserASync(request);
+                        task = GetRequestAsync(request);
                     }
                 }
                 #endregion

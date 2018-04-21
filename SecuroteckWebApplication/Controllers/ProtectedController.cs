@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Web.Http;
 using SecuroteckWebApplication.Models;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace SecuroteckWebApplication.Controllers
 {
@@ -13,9 +14,9 @@ namespace SecuroteckWebApplication.Controllers
     {
         [ActionName("Hello")]
         [CustomAuthorise]
-        public HttpResponseMessage Get(HttpRequestMessage request)
+        public IHttpActionResult Get(HttpRequestMessage request)
         {
-            HttpResponseMessage message = new HttpResponseMessage(HttpStatusCode.OK);
+            //HttpResponseMessage message = new HttpResponseMessage(HttpStatusCode.OK);
             string headerKey = request.Headers.GetValues("ApiKey").FirstOrDefault();
             string userName = null;
             if (headerKey != null)
@@ -26,48 +27,60 @@ namespace SecuroteckWebApplication.Controllers
                 {
                     User user = DBAccess.checkUserViaKeyObj(headerKey);
                     userName = user.UserName;
-                    return Request.CreateResponse(HttpStatusCode.OK, "Hello " + userName);
+                    return Ok("Hello " + userName);
 
                 }
-                return Request.CreateResponse(HttpStatusCode.OK, userName);
+                return Ok(userName);
             }
-            return Request.CreateResponse(HttpStatusCode.OK, userName);
+            return Ok(userName);
         }
 
 
         [CustomAuthorise]
         [ActionName("SHA1")]
         [HttpGet]
-        public HttpResponseMessage SHA1([FromUri] string request)
-        {
-            HttpResponseMessage message = new HttpResponseMessage(HttpStatusCode.OK);
-            if (request != null)
+        public IHttpActionResult SHA1([FromUri] string message)
+        {        
+            if (message != null)
             {
-                byte[] bytes = System.Text.Encoding.UTF8.GetBytes(request);
+                string SHA1string = null;
+                using (SHA1Managed sha1 = new SHA1Managed())
+                {
+                    var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(message));
+                    var sb = new StringBuilder(hash.Length * 2);
+
+                    foreach (byte b in hash)
+                    {                
+                        sb.Append(b.ToString("X2"));
+                    }
+                    SHA1string = sb.ToString();
+                }
+
+                /*    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message);
                 SHA1 sha = new SHA1CryptoServiceProvider();
                 byte[] requestSHA1 = sha.ComputeHash(bytes);
-                string requestSHA1String = requestSHA1.ToString();
-                return Request.CreateResponse(HttpStatusCode.OK, requestSHA1String);
+                string requestSHA1String = requestSHA1.ToString(); */
+                return Ok(SHA1string); 
             }
-            return Request.CreateResponse(HttpStatusCode.OK, "Bad Request");
+            return Ok("Bad Request");
         }
 
 
         [CustomAuthorise]
-        [ActionName("Sha256")]
+        [ActionName("SHA256")]
         [HttpGet]
-        public HttpResponseMessage SHA256([FromUri] string request)
+        public IHttpActionResult SHA256([FromUri] string message)
         {
-            HttpResponseMessage message = new HttpResponseMessage(HttpStatusCode.OK);
-            if (request != null)
+            HttpResponseMessage outMessage = new HttpResponseMessage(HttpStatusCode.OK);
+            if (message != null)
             {
-                byte[] bytes = System.Text.Encoding.UTF8.GetBytes(request);
+                byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message);
                 SHA256 sha = new SHA256CryptoServiceProvider();
                 byte[] requestSHA256 = sha.ComputeHash(bytes);
                 string requestSHA256String = requestSHA256.ToString();
-                return Request.CreateResponse(HttpStatusCode.OK, requestSHA256String);
+                return Ok(requestSHA256String);
             }
-            return Request.CreateResponse(HttpStatusCode.OK, "Bad Request");
+            return Ok("Bad Request");
         }
     }
 }
