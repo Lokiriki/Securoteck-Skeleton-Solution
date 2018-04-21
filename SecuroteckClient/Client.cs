@@ -187,7 +187,7 @@ namespace SecuroteckClient
 
                         var request = new HttpRequestMessage()
                         {
-                            RequestUri = new Uri(client.BaseAddress + "api/protected/SHA1?message=" + inRequest),
+                            RequestUri = new Uri(client.BaseAddress + "api/protected/sha1?message=" + inRequest),
                         };
                         request.Headers.Add("ApiKey", localApiKey);
 
