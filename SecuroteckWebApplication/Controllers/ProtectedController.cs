@@ -12,8 +12,8 @@ namespace SecuroteckWebApplication.Controllers
 {
     public class ProtectedController : ApiController
     {
-        [ActionName("Hello")]
         [CustomAuthorise]
+        [ActionName("Hello")]
         public IHttpActionResult Get(HttpRequestMessage request)
         {
             //HttpResponseMessage message = new HttpResponseMessage(HttpStatusCode.OK);
@@ -40,27 +40,22 @@ namespace SecuroteckWebApplication.Controllers
         [ActionName("SHA1")]
         [HttpGet]
         public IHttpActionResult SHA1([FromUri] string message)
-        {        
+        {
             if (message != null)
             {
                 string SHA1string = null;
                 using (SHA1Managed sha1 = new SHA1Managed())
                 {
-                    var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(message));
-                    var sb = new StringBuilder(hash.Length * 2);
+                    var hash1 = sha1.ComputeHash(Encoding.UTF8.GetBytes(message));
+                    var sb = new StringBuilder(hash1.Length * 2);
 
-                    foreach (byte b in hash)
-                    {                
+                    foreach (byte b in hash1)
+                    {
                         sb.Append(b.ToString("X2"));
                     }
                     SHA1string = sb.ToString();
                 }
-
-                /*    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message);
-                SHA1 sha = new SHA1CryptoServiceProvider();
-                byte[] requestSHA1 = sha.ComputeHash(bytes);
-                string requestSHA1String = requestSHA1.ToString(); */
-                return Ok(SHA1string); 
+                return Ok(SHA1string);
             }
             return Ok("Bad Request");
         }
@@ -71,16 +66,39 @@ namespace SecuroteckWebApplication.Controllers
         [HttpGet]
         public IHttpActionResult SHA256([FromUri] string message)
         {
-            HttpResponseMessage outMessage = new HttpResponseMessage(HttpStatusCode.OK);
             if (message != null)
             {
-                byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message);
-                SHA256 sha = new SHA256CryptoServiceProvider();
-                byte[] requestSHA256 = sha.ComputeHash(bytes);
-                string requestSHA256String = requestSHA256.ToString();
-                return Ok(requestSHA256String);
+                string SHA256string = null;
+                StringBuilder sb = new StringBuilder();
+
+                using (SHA256 hash256 = SHA256Managed.Create())
+                {
+                    Encoding enc = Encoding.UTF8;
+                    Byte[] result = hash256.ComputeHash(enc.GetBytes(message));
+
+                    foreach (Byte b in result)
+                    {
+                        sb.Append(b.ToString("x2"));
+                    }
+                    SHA256string = sb.ToString();
+                }
+                return Ok(SHA256string);
             }
             return Ok("Bad Request");
+        }
+
+        [CustomAuthorise]
+        [ActionName("GetPublicKey")]
+        public IHttpActionResult GetPublicKey()
+        {
+            try
+            {
+                return Ok(WebApiConfig.pubkey);
+            }
+           catch
+            {
+                return BadRequest();
+            }
         }
     }
 }

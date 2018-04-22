@@ -10,6 +10,7 @@ namespace SecuroteckWebApplication
     public static class WebApiConfig
     {
         // Publically accessible global static variables could go here
+        public static string pubkey;
 
         public static void Register(HttpConfiguration config)
         {
@@ -18,6 +19,9 @@ namespace SecuroteckWebApplication
 
             #region Task 7
             // Configuration for Task 9
+            RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
+            pubkey = rsa.ToXmlString(false);
+            string prikey = rsa.ToXmlString(true);
             #endregion
 
             // Web API routes

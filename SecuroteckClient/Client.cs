@@ -14,13 +14,12 @@ namespace SecuroteckClient
     class Client
     {
         static HttpClient client = new HttpClient();
-        private static string inRequest = null;
+        private static bool taskSet = false;
         private static HttpResponseMessage response = null;
+        private static string inRequest = null;
         private static string localUserName = null;
         private static string localApiKey = null;
-
-        //private static string localUserName = "Alex";
-        //private static string localApiKey = "88bf18f0-a5b0-4b4e-9307-c51126cc9e7b";
+        private static string serverPublicKey = null;
 
         static void Main(string[] args)
         {
@@ -28,21 +27,18 @@ namespace SecuroteckClient
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            while (inRequest == null || inRequest == "")
+            Console.WriteLine("Hello. What would you like to do?");
+            inRequest = Console.ReadLine();
+            if (inRequest == "Exit")
             {
-                Console.Clear();
-                Console.WriteLine("Hello. What would you like to do?");
-                inRequest = Console.ReadLine();
+                Environment.Exit(0);
             }
-
             do
             {
-                Console.Clear();
-                Console.WriteLine(inRequest);
                 RunAsync().Wait();
             }
             while (inRequest != "Exit");
-            Environment.Exit(0);
+
         }
 
         static async Task RunAsync()
@@ -55,25 +51,19 @@ namespace SecuroteckClient
                 #region TalkBack Hello
                 if (inRequest == "TalkBack Hello")
                 {
+                    taskSet = true;
                     task = GetStringAsync("/api/talkback/hello");
                 }
                 #endregion
 
                 #region TalkBack Sort
-                else if (inRequest.Contains("TalkBack Sort"))
+                else if (inRequest.Contains("TalkBack Sort ["))
                 {
+                    taskSet = true;
                     string[] requestNums = null;
                     string outRequest = "/api/talkback/sort?";
 
-                    inRequest = inRequest.Remove(0, "TalkBack Sort".Length);
-                    try
-                    {
-                        inRequest = inRequest.Remove(0, " [".Length);
-                    }
-                    catch
-                    {
-
-                    }
+                    inRequest = inRequest.Remove(0, "TalkBack Sort [".Length);
                     inRequest = inRequest.TrimEnd(new char[] { ']', ' ' });
                     requestNums = inRequest.Split(',');
 
@@ -109,6 +99,7 @@ namespace SecuroteckClient
                 #region User Get
                 else if (inRequest.Contains("User Get"))
                 {
+                    taskSet = true;
                     string outRequest = "/api/user/new?username=";
 
                     inRequest = inRequest.Remove(0, "User Get ".Length);
@@ -122,6 +113,7 @@ namespace SecuroteckClient
                 #region User Post
                 else if (inRequest.Contains("User Post"))
                 {
+                    taskSet = true;
                     string userName = inRequest.Remove(0, "User Post ".Length);
 
                     task = PostUserASync(userName);
@@ -131,6 +123,7 @@ namespace SecuroteckClient
                 #region User Set
                 else if (inRequest.Contains("User Set"))
                 {
+                    taskSet = true;
                     inRequest = inRequest.Remove(0, "User Set ".Length);
                     string[] newUser = inRequest.Split(new char[] { ' ' }, 2);
                     localUserName = newUser[0];
@@ -142,13 +135,13 @@ namespace SecuroteckClient
                 #region User Delete
                 else if (inRequest.Contains("User Delete"))
                 {
-                    //HttpRequestMessage outRequest = "/api/user/removeuser?username=";     
                     if (localUserName == null)
                     {
                         Console.WriteLine("You need to do a User Post or User Set first");
                     }
                     else
                     {
+                        taskSet = true;
                         var request = new HttpRequestMessage()
                         {
                             RequestUri = new Uri(client.BaseAddress + "api/user/removeuser?username=" + localUserName),
@@ -170,6 +163,7 @@ namespace SecuroteckClient
                     }
                     else
                     {
+                        taskSet = true;
                         var request = new HttpRequestMessage()
                         {
                             RequestUri = new Uri(client.BaseAddress + "api/protected/hello"),
@@ -191,6 +185,7 @@ namespace SecuroteckClient
                     }
                     else
                     {
+                        taskSet = true;
                         inRequest = inRequest.Remove(0, "Protected SHA1 ".Length);
 
                         var request = new HttpRequestMessage()
@@ -213,6 +208,7 @@ namespace SecuroteckClient
                     }
                     else
                     {
+                        taskSet = true;
                         inRequest = inRequest.Remove(0, "Protected SHA256 ".Length);
 
                         var request = new HttpRequestMessage()
@@ -226,14 +222,45 @@ namespace SecuroteckClient
                 }
                 #endregion
 
-                if (await Task.WhenAny(task, Task.Delay(20000)) == task)
+                #region Protected Get Public Key
+                else if (inRequest == "Protected Get PublicKey")
                 {
-                    Console.WriteLine(task.Result);
+                    if (localApiKey == null)
+                    {
+                        Console.WriteLine("You need to do a User Post or User Set first");
+                    }
+                    else
+                    {
+                        taskSet = true;
+                        var request = new HttpRequestMessage()
+                        {
+                            RequestUri = new Uri(client.BaseAddress + "api/protected/getpublickey"),
+                        };
+                        request.Headers.Add("ApiKey", localApiKey);
+
+                        task = GetKeyAsync(request);
+                    }
+                }
+                #endregion
+
+                if (taskSet == true)
+                {
+                    if (await Task.WhenAny(task, Task.Delay(20000)) == task)
+                    {
+                        Console.WriteLine(task.Result);
+                        taskSet = false;
+                        Console.WriteLine("What would you like to do next?");
+                        inRequest = Console.ReadLine();
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("What would you like to do next?");
+                    inRequest = Console.ReadLine();
                 }
 
-                Console.WriteLine("What would you like to do next?");
-                inRequest = Console.ReadLine();
                 Console.Clear();
+                Console.WriteLine(inRequest);
             }
             catch (Exception e)
             {
@@ -254,6 +281,23 @@ namespace SecuroteckClient
             string responsestring = "";
             response = await client.SendAsync(request);
             responsestring = await response.Content.ReadAsStringAsync();
+            return responsestring;
+        }
+
+        static async Task<string> GetKeyAsync(HttpRequestMessage request)
+        {
+            string responsestring = "";
+            response = await client.SendAsync(request);
+            responsestring = await response.Content.ReadAsStringAsync();
+            if (responsestring != null)
+            {
+                serverPublicKey = responsestring;
+                responsestring = "Got Public Key";
+            }
+            else
+            {
+                responsestring = "Couldn't Get the Public Key";
+            }
             return responsestring;
         }
 
