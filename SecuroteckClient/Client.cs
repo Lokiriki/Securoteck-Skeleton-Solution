@@ -274,7 +274,7 @@ namespace SecuroteckClient
 
                 if (taskSet == true)
                 {
-                    if (await Task.WhenAny(task, Task.Delay(20000)) == task)
+                    if (await Task.WhenAny(task, Task.Delay(50000)) == task)
                     {
                         Console.WriteLine(task.Result);
                         taskSet = false;
@@ -321,7 +321,7 @@ namespace SecuroteckClient
             string responsestring = "";
             response = await client.SendAsync(request);
             responsestring = await response.Content.ReadAsAsync<string>();
-            VerifyData(responsestring);
+            responsestring = VerifyData(responsestring);
             return responsestring;
         }
 
@@ -394,6 +394,7 @@ namespace SecuroteckClient
             RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
             rsa.FromXmlString(serverPublicKey);
 
+            signatureString = signatureString.Replace("-", "");
             byte[] HexAsBytes = new byte[signatureString.Length / 2];
             for (int index = 0; index < HexAsBytes.Length; index++)
             {
