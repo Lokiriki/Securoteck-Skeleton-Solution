@@ -7,6 +7,8 @@ using System.Web.Http;
 using SecuroteckWebApplication.Models;
 using System.Security.Cryptography;
 using System.Text;
+using System.IO;
+using System.Text.RegularExpressions;
 
 namespace SecuroteckWebApplication.Controllers
 {
@@ -74,9 +76,9 @@ namespace SecuroteckWebApplication.Controllers
                 using (SHA256 hash256 = SHA256Managed.Create())
                 {
                     Encoding enc = Encoding.UTF8;
-                    Byte[] result = hash256.ComputeHash(enc.GetBytes(message));
+                    byte[] result = hash256.ComputeHash(enc.GetBytes(message));
 
-                    foreach (Byte b in result)
+                    foreach (byte b in result)
                     {
                         sb.Append(b.ToString("x2"));
                     }
@@ -93,12 +95,41 @@ namespace SecuroteckWebApplication.Controllers
         {
             try
             {
-                return Ok(WebApiConfig.pubkey);
+                return Ok(WebApiConfig.pubkey.ToString());
             }
-           catch
+            catch
             {
                 return BadRequest();
             }
+        }
+
+        [CustomAuthorise]
+        [ActionName("Sign")]
+        [HttpGet]
+        public IHttpActionResult Sign([FromUri] string message)
+        {
+            string signedMessage = null;
+            signedMessage = MakeSignData(message);
+            return Ok(signedMessage);
+        }
+
+        public string MakeSignData(string message)
+        {
+            string hexSignedMessage = null;
+            StringBuilder sb = new StringBuilder();
+
+            byte[] str = ASCIIEncoding.Unicode.GetBytes(message); 
+
+            SHA1Managed sha1hash = new SHA1Managed();
+            byte[] hashdata = sha1hash.ComputeHash(str);
+
+            RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
+            rsa.FromXmlString(WebApiConfig.prikey);
+            
+            byte[] signature = rsa.SignHash(hashdata, CryptoConfig.MapNameToOID("SHA1"));
+            hexSignedMessage = BitConverter.ToString(signature);
+
+            return hexSignedMessage;
         }
     }
 }

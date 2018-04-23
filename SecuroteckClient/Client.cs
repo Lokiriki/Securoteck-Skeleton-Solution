@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 
 namespace SecuroteckClient
 {
@@ -243,6 +244,34 @@ namespace SecuroteckClient
                 }
                 #endregion
 
+                #region Protected Sign
+                else if (inRequest.Contains("Protected Sign "))
+                {
+                    if (localApiKey == null)
+                    {
+                        Console.WriteLine("You need to do a User Post or User Set first");
+                    }
+                    if (serverPublicKey == null)
+                    {
+                        Console.WriteLine("Client doesn't yet have the public key");
+                    }
+                    else
+                    {
+                        taskSet = true;
+                        inRequest = inRequest.Remove(0, "Protected Sign ".Length);
+
+                        var request = new HttpRequestMessage()
+                        {
+                            RequestUri = new Uri(client.BaseAddress + "api/protected/sign?message=" + inRequest),
+                        };
+                        request.Headers.Add("ApiKey", localApiKey);
+
+                        task = GetSignedMessage(request);
+                    }
+
+                }
+                #endregion
+
                 if (taskSet == true)
                 {
                     if (await Task.WhenAny(task, Task.Delay(20000)) == task)
@@ -281,6 +310,18 @@ namespace SecuroteckClient
             string responsestring = "";
             response = await client.SendAsync(request);
             responsestring = await response.Content.ReadAsStringAsync();
+            //byte[] str = ASCIIEncoding.Unicode.GetBytes(plaintext);
+
+            return responsestring;
+        }
+
+        static async Task<string> GetSignedMessage(HttpRequestMessage request)
+        {
+
+            string responsestring = "";
+            response = await client.SendAsync(request);
+            responsestring = await response.Content.ReadAsAsync<string>();
+            VerifyData(responsestring);
             return responsestring;
         }
 
@@ -288,7 +329,7 @@ namespace SecuroteckClient
         {
             string responsestring = "";
             response = await client.SendAsync(request);
-            responsestring = await response.Content.ReadAsStringAsync();
+            responsestring = await response.Content.ReadAsAsync<string>();
             if (responsestring != null)
             {
                 serverPublicKey = responsestring;
@@ -340,6 +381,36 @@ namespace SecuroteckClient
             localApiKey = null;
             localUserName = null;
             return responsestring;
+        }
+
+        static string VerifyData(string signatureString)
+        {
+            string verify = null;
+            byte[] str = ASCIIEncoding.Unicode.GetBytes(inRequest);
+
+            SHA1Managed sha1hash = new SHA1Managed();
+            byte[] hashdata = sha1hash.ComputeHash(str);
+
+            RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
+            rsa.FromXmlString(serverPublicKey);
+
+            byte[] HexAsBytes = new byte[signatureString.Length / 2];
+            for (int index = 0; index < HexAsBytes.Length; index++)
+            {
+                string byteValue = signatureString.Substring(index * 2, 2);
+                HexAsBytes[index] = byte.Parse(byteValue, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            }
+            if (rsa.VerifyHash(hashdata, "SHA1", HexAsBytes))
+            {
+                verify = "Message was successfully signed";
+                return verify;
+            }
+            else
+            {
+                verify = "Message was not successfully signed";
+                return verify;
+            }
+
         }
         #endregion
     }
